@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Chat!</title>
+
+    <style>
+        body {
+            display: grid;
+        }
+    </style>
+  </head>
+
+  <body>
+    <h1>Chat!</h1>
+    <span id="status"></span>
+    <button type="button" id="connect">Connect</button>
+    <textarea id="chat" rows="20", cols="50" readonly></textarea>
+    <form id="chatform">
+      <input type="text" id="to" /><br />
+      <input type="text" id="text" />
+      <input type="submit" id="send" />
+    </form>
+
+    <hr />
+
+    <script>
+      const $status = document.querySelector('#status')
+      const $connectButton = document.querySelector('#connect')
+      const $log = document.querySelector('#chat')
+      const $form = document.querySelector('#chatform')
+      const $input = document.querySelector('#text')
+      const $to = document.querySelector('#to')
+
+      /** @type {WebSocket | null} */
+      var socket = null
+
+      function makeid(length) {
+          var result           = '';
+          var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+          var charactersLength = characters.length;
+          for ( var i = 0; i < length; i++ ) {
+              result += characters.charAt(Math.floor(Math.random() * charactersLength));
+          }
+          return result;
+      }
+
+      const user_id = makeid(5);
+
+      function log(msg, type = 'status') {
+        $log.value += `${type}">${msg}\n`;
+        $log.scrollTop += $log.scrollHeight;
+      }
+
+      function connect() {
+        disconnect()
+
+        const { location } = window
+
+        const proto = location.protocol.startsWith('https') ? 'wss' : 'ws'
+        const wsUri = `${proto}://${location.host}/ws?user_id=${user_id}`
+
+        log('Connecting...')
+        socket = new WebSocket(wsUri)
+
+        socket.onopen = () => {
+          log('Connected ' + user_id)
+          updateConnectionStatus()
+        }
+
+        socket.onmessage = (ev) => {
+          log('Received: ' + ev.data, 'message')
+        }
+
+        socket.onclose = () => {
+          log('Disconnected')
+          socket = null
+          updateConnectionStatus()
+        }
+      }
+
+      function disconnect() {
+        if (socket) {
+          log('Disconnecting...')
+          socket.close()
+          socket = null
+
+          updateConnectionStatus()
+        }
+      }
+
+      function updateConnectionStatus() {
+        if (socket) {
+          $status.style.backgroundColor = 'transparent'
+          $status.style.color = 'green'
+          $status.textContent = `connected`
+          $connectButton.innerHTML = 'Disconnect'
+          $input.focus()
+        } else {
+          $status.style.backgroundColor = 'red'
+          $status.style.color = 'white'
+          $status.textContent = 'disconnected'
+          $connectButton.textContent = 'Connect'
+        }
+      }
+
+      $connectButton.addEventListener('click', () => {
+        if (socket) {
+          disconnect()
+        } else {
+          connect()
+        }
+
+        updateConnectionStatus()
+      })
+
+      $form.addEventListener('submit', (ev) => {
+        ev.preventDefault()
+
+        const text = $input.value
+        const to = $to.value
+
+        log('Sending: ' + text)
+        const msg = {
+          msg: text,
+          to,
+        }
+        socket.send(JSON.stringify(msg))
+
+        $input.value = ''
+        $input.focus()
+      })
+
+      updateConnectionStatus()
+
+      window.addEventListener('beforeunload', () => {
+        socket.close();
+      });
+
+    </script>
+  </body>
+</html>

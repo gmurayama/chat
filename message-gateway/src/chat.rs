@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use actix::prelude::*;
+use tracing::Level;
 
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct ReceiveMessage {
     pub message: String,
@@ -10,7 +11,7 @@ pub struct ReceiveMessage {
     pub from: String,
 }
 
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct SendMessage {
     pub message: String,
@@ -20,7 +21,7 @@ pub struct SendMessage {
     pub from: String,
 }
 
-#[derive(Message)]
+#[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct Connect {
     pub user_id: String,
@@ -50,7 +51,8 @@ impl Actor for SessionManager {
 impl Handler<Connect> for SessionManager {
     type Result = ();
 
-    fn handle(&mut self, msg: Connect, _: &mut Self::Context) -> Self::Result {
+    #[tracing::instrument(level = "info", name = "Handler Connect", skip(self, msg, _ctx))]
+    fn handle(&mut self, msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
         self.sessions.insert(msg.user_id, msg.addr);
     }
 }
@@ -58,7 +60,8 @@ impl Handler<Connect> for SessionManager {
 impl Handler<SendMessage> for SessionManager {
     type Result = ();
 
-    fn handle(&mut self, msg: SendMessage, ctx: &mut Self::Context) -> Self::Result {
+    #[tracing::instrument(level = Level::INFO, name = "Handler SendMessage", skip(self, _ctx))]
+    fn handle(&mut self, msg: SendMessage, _ctx: &mut Self::Context) -> Self::Result {
         match self.sessions.get(&msg.to) {
             Some(s) => s.do_send(ReceiveMessage {
                 from: msg.from,

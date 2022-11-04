@@ -4,12 +4,12 @@ use actix_web::{
     middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
-use env_logger::Env;
 use serde::Deserialize;
 use std::time::Instant;
-use tracing::{subscriber::set_global_default, Level};
+use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
+use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{filter::filter_fn, prelude::*, EnvFilter, Registry};
 
 use message_gateway::{chat::SessionManager, session::WsSession};
@@ -45,8 +45,7 @@ async fn chat(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // LogTracer::init().expect("Failed to set logger");
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    LogTracer::init().expect("Failed to set logger");
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     let emit_bunyan = false;
@@ -55,8 +54,9 @@ async fn main() -> std::io::Result<()> {
         BunyanFormattingLayer::new("tracing_demo".into(), std::io::stdout)
             .with_filter(filter_fn(move |_| emit_bunyan));
 
-    let pretty_formatting_layer =
-        tracing_subscriber::fmt::layer().with_filter(filter_fn(move |_| true));
+    let pretty_formatting_layer = tracing_subscriber::fmt::layer()
+        .with_span_events(FmtSpan::NEW)
+        .with_filter(filter_fn(move |_| true));
 
     let subscriber = Registry::default()
         .with(env_filter)

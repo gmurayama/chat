@@ -51,7 +51,7 @@ impl Actor for SessionManager {
 impl Handler<Connect> for SessionManager {
     type Result = ();
 
-    #[tracing::instrument(level = "info", name = "Handler Connect", skip(self, msg, _ctx))]
+    #[tracing::instrument(name = "Handler Connect", skip(self, msg, _ctx))]
     fn handle(&mut self, msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
         self.sessions.insert(msg.user_id, msg.addr);
     }
@@ -60,7 +60,7 @@ impl Handler<Connect> for SessionManager {
 impl Handler<SendMessage> for SessionManager {
     type Result = ();
 
-    #[tracing::instrument(level = Level::INFO, name = "Handler SendMessage", skip(self, _ctx))]
+    #[tracing::instrument(name = "Handler SendMessage", skip(self, _ctx))]
     fn handle(&mut self, msg: SendMessage, _ctx: &mut Self::Context) -> Self::Result {
         match self.sessions.get(&msg.to) {
             Some(s) => s.do_send(ReceiveMessage {

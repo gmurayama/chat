@@ -1,3 +1,3 @@
-pub mod chat;
-pub mod session;
+pub mod actors;
 pub mod settings;
+pub mod telemetry;

@@ -4,16 +4,11 @@ use actix_web::{
     middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
-use message_gateway::settings;
+use message_gateway::{settings, telemetry};
 use serde::Deserialize;
 use std::time::Instant;
-use tracing::subscriber::set_global_default;
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_log::LogTracer;
-use tracing_subscriber::fmt::format::FmtSpan;
-use tracing_subscriber::{filter::filter_fn, prelude::*, EnvFilter, Registry};
 
-use message_gateway::{chat::SessionManager, session::WsSession};
+use message_gateway::actors::{chat::SessionManager, session::WsSession};
 
 async fn index() -> impl Responder {
     NamedFile::open_async("./static/index.html").await.unwrap()
@@ -47,27 +42,7 @@ async fn chat(
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let settings = settings::get_config().expect("failed to get settings");
-
-    LogTracer::init().expect("Failed to set logger");
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    let emit_bunyan = false;
-    let bunyan_json_layer = JsonStorageLayer.with_filter(filter_fn(move |_| emit_bunyan));
-    let bunyan_formatting_layer =
-        BunyanFormattingLayer::new("tracing_demo".into(), std::io::stdout)
-            .with_filter(filter_fn(move |_| emit_bunyan));
-
-    let pretty_formatting_layer = tracing_subscriber::fmt::layer()
-        .with_span_events(FmtSpan::NEW)
-        .with_filter(filter_fn(move |_| true));
-
-    let subscriber = Registry::default()
-        .with(env_filter)
-        .with(bunyan_json_layer)
-        .with(bunyan_formatting_layer)
-        .with(pretty_formatting_layer);
-
-    set_global_default(subscriber).expect("Failed to set subscriber");
+    telemetry::setup(settings.app.environment);
 
     let server = SessionManager::new().start();
 

@@ -28,7 +28,7 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize::<Settings>()
 }
 
-#[derive(serde::Deserialize, Clone)]
+#[derive(serde::Deserialize, Clone, PartialEq)]
 pub enum Environment {
     Development,
     Production,

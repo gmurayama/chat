@@ -3,7 +3,7 @@ use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
-use crate::chat::{Connect, ReceiveMessage, SendMessage, SessionManager};
+use crate::actors::chat::{Connect, ReceiveMessage, SendMessage, SessionManager};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClientMessage {

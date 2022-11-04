@@ -34,7 +34,7 @@ async fn chat(
 
     ws::start(
         WsSession {
-            user_id: user_id.into(),
+            user_id,
             hb: Instant::now(),
             session_manager: server.get_ref().clone(),
         },

@@ -32,7 +32,7 @@ impl Actor for WsSession {
             })
             .into_actor(self)
             .then(|res, _, ctx| {
-                if let Err(_) = res {
+                if res.is_err() {
                     ctx.stop();
                 }
                 fut::ready(())

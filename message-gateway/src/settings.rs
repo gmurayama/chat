@@ -30,7 +30,9 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
 
 #[derive(serde::Deserialize, Clone, PartialEq)]
 pub enum Environment {
+    #[serde(rename = "development")]
     Development,
+    #[serde(rename = "production")]
     Production,
 }
 

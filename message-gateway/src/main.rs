@@ -4,6 +4,7 @@ use actix_web::{
     middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
+use message_gateway::settings;
 use serde::Deserialize;
 use std::time::Instant;
 use tracing::subscriber::set_global_default;
@@ -45,6 +46,8 @@ async fn chat(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let settings = settings::get_config().expect("failed to get settings");
+
     LogTracer::init().expect("Failed to set logger");
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
@@ -77,7 +80,7 @@ async fn main() -> std::io::Result<()> {
             .route("/ws", web::get().to(chat))
     })
     .workers(1)
-    .bind(("127.0.0.1", 8080))?
+    .bind((settings.app.host, settings.app.port))?
     .run()
     .await
 }

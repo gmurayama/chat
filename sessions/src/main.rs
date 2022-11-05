@@ -1,39 +1,20 @@
-use session::{
-    session_server::{Session, SessionServer},
-    GetHealthRequest, GetHealthResponse,
-};
-use tonic::{transport::Server, Request, Response, Status};
+use actix_web::{middleware::Logger, web, App, HttpServer};
+use sessions::{routes, settings, telemetry};
 
-pub mod session {
-    tonic::include_proto!("server"); // The string specified here must match the proto package name
-}
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let settings = settings::get_config().expect("failed to get settings");
+    let shared_settings = settings.clone();
+    telemetry::setup(settings.app.environment);
 
-#[derive(Debug, Default)]
-pub struct SessionService {}
-
-#[tonic::async_trait]
-impl Session for SessionService {
-    async fn get_health(
-        &self,
-        request: Request<GetHealthRequest>,
-    ) -> Result<Response<GetHealthResponse>, Status> {
-        println!("Got a request: {:?}", request);
-
-        let reply = GetHealthResponse {};
-
-        Ok(Response::new(reply)) // Send back our formatted greeting
-    }
-}
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
-    let session_service = SessionService::default();
-
-    Server::builder()
-        .add_service(SessionServer::new(session_service))
-        .serve(addr)
-        .await?;
-
-    Ok(())
+    HttpServer::new(move || {
+        App::new()
+            .wrap(Logger::default())
+            .app_data(web::Data::new(shared_settings.clone()))
+            .service(routes::message::route_message)
+    })
+    .workers(1)
+    .bind((settings.app.host, settings.app.port))?
+    .run()
+    .await
 }

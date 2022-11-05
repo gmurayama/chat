@@ -1,9 +1,0 @@
-syntax = "proto3";
-package server;
-
-service Session {
-  rpc GetHealth(GetHealthRequest) returns (GetHealthResponse);
-}
-
-message GetHealthRequest {}
-message GetHealthResponse {}

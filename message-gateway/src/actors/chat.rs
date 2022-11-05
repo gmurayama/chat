@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use actix::prelude::*;
 
-
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
 pub struct ReceiveMessage {
@@ -27,6 +26,12 @@ pub struct Connect {
     pub user_id: String,
 
     pub addr: Recipient<ReceiveMessage>,
+}
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+pub struct Disconnect {
+    pub user_id: String,
 }
 
 // -------------------
@@ -54,6 +59,15 @@ impl Handler<Connect> for SessionManager {
     #[tracing::instrument(name = "Handler Connect", skip(self, msg, _ctx))]
     fn handle(&mut self, msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
         self.sessions.insert(msg.user_id, msg.addr);
+    }
+}
+
+impl Handler<Disconnect> for SessionManager {
+    type Result = ();
+
+    #[tracing::instrument(name = "Handler Disconnect", skip(self, _ctx))]
+    fn handle(&mut self, msg: Disconnect, _ctx: &mut Self::Context) -> Self::Result {
+        self.sessions.remove(&msg.user_id);
     }
 }
 

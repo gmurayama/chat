@@ -1,23 +1,5 @@
-[package]
-name = "messaging"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-actix = "0.13"
-actix-web = "4.2"
-actix-web-actors = "4.1"
-reqwest = "0.11"
-
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-
-tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
-tracing-bunyan-formatter = "0.3"
-tracing-log = "0.1"
-log = "0.4"
-config = "0.13"
-serde-aux = "3"
+[workspace]
+members = [
+    "api",
+    "infrastructure",
+]

@@ -1,5 +1,5 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use sessions::{routes, settings, telemetry};
+use messaging_api::{routes, settings, telemetry};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

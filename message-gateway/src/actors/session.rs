@@ -1,9 +1,9 @@
 use actix::{prelude::*, Actor, StreamHandler};
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use crate::actors::chat::{Connect, ReceiveMessage, SendMessage, SessionManager};
+use crate::actors::chat::{Connect, Disconnect, ReceiveMessage, SendMessage, SessionManager};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClientMessage {
@@ -19,10 +19,32 @@ pub struct WsSession {
     pub session_manager: Addr<SessionManager>,
 }
 
+impl WsSession {
+    fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
+        ctx.run_interval(Duration::from_secs(5), |act, ctx| {
+            if Instant::now().duration_since(act.hb) > Duration::from_secs(10) {
+                log::error!("Websocket Client heartbeat failed, disconnecting!");
+
+                act.session_manager.do_send(Disconnect {
+                    user_id: act.user_id.clone(),
+                });
+
+                ctx.stop();
+
+                return;
+            }
+
+            ctx.ping(b"");
+        });
+    }
+}
+
 impl Actor for WsSession {
     type Context = ws::WebsocketContext<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
+        self.hb(ctx);
+
         let addr = ctx.address();
 
         self.session_manager
@@ -38,6 +60,15 @@ impl Actor for WsSession {
                 fut::ready(())
             })
             .wait(ctx);
+    }
+
+    fn stopping(&mut self, _: &mut Self::Context) -> Running {
+        // notify chat server
+        self.session_manager.do_send(Disconnect {
+            user_id: self.user_id.clone(),
+        });
+
+        Running::Stop
     }
 }
 

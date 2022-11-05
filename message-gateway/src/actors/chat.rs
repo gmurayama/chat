@@ -37,46 +37,46 @@ pub struct Disconnect {
 // -------------------
 // SessionManager
 
-pub struct SessionManager {
-    pub sessions: HashMap<String, Recipient<ReceiveMessage>>,
+pub struct ConnManager {
+    pub connections: HashMap<String, Recipient<ReceiveMessage>>,
 }
 
-impl SessionManager {
+impl ConnManager {
     pub fn new() -> Self {
-        SessionManager {
-            sessions: HashMap::new(),
+        ConnManager {
+            connections: HashMap::new(),
         }
     }
 }
 
-impl Actor for SessionManager {
+impl Actor for ConnManager {
     type Context = Context<Self>;
 }
 
-impl Handler<Connect> for SessionManager {
+impl Handler<Connect> for ConnManager {
     type Result = ();
 
     #[tracing::instrument(name = "Handler Connect", skip(self, msg, _ctx))]
     fn handle(&mut self, msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
-        self.sessions.insert(msg.user_id, msg.addr);
+        self.connections.insert(msg.user_id, msg.addr);
     }
 }
 
-impl Handler<Disconnect> for SessionManager {
+impl Handler<Disconnect> for ConnManager {
     type Result = ();
 
     #[tracing::instrument(name = "Handler Disconnect", skip(self, _ctx))]
     fn handle(&mut self, msg: Disconnect, _ctx: &mut Self::Context) -> Self::Result {
-        self.sessions.remove(&msg.user_id);
+        self.connections.remove(&msg.user_id);
     }
 }
 
-impl Handler<SendMessage> for SessionManager {
+impl Handler<SendMessage> for ConnManager {
     type Result = ();
 
     #[tracing::instrument(name = "Handler SendMessage", skip(self, _ctx))]
     fn handle(&mut self, msg: SendMessage, _ctx: &mut Self::Context) -> Self::Result {
-        match self.sessions.get(&msg.to) {
+        match self.connections.get(&msg.to) {
             Some(s) => s.do_send(ReceiveMessage {
                 from: msg.from,
                 message: msg.message,

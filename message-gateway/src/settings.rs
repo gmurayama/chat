@@ -1,7 +1,7 @@
 use serde_aux::field_attributes::deserialize_number_from_string;
 
 #[derive(serde::Deserialize, Clone)]
-pub struct Session {
+pub struct WebsocketConnection {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub timeout: u64,
     #[serde(deserialize_with = "deserialize_number_from_string")]
@@ -19,7 +19,7 @@ pub struct Application {
 #[derive(serde::Deserialize, Clone)]
 pub struct Settings {
     pub app: Application,
-    pub session: Session,
+    pub ws_conn: WebsocketConnection,
 }
 
 pub fn get_config() -> Result<Settings, config::ConfigError> {
@@ -32,8 +32,8 @@ pub fn get_config() -> Result<Settings, config::ConfigError> {
         .set_default("app.host", "localhost")?
         .set_default("app.port", 8080)?
         .set_default("app.environment", Environment::Development.as_str())?
-        .set_default("session.timeout", 10)?
-        .set_default("session.interval", 5)?
+        .set_default("ws_conn.timeout", 10)?
+        .set_default("ws_conn.interval", 5)?
         .build()?;
 
     settings.try_deserialize::<Settings>()

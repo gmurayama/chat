@@ -5,14 +5,14 @@ use actix_web::{
 };
 use actix_web_actors::ws;
 use message_gateway::{
-    actors::session::Heartbeat,
+    actors::conn::Heartbeat,
     settings::{self},
     telemetry,
 };
 use serde::Deserialize;
 use std::time::{Duration, Instant};
 
-use message_gateway::actors::{chat::SessionManager, session::WsSession};
+use message_gateway::actors::{chat::ConnManager, conn::WsConn};
 
 async fn index() -> impl Responder {
     NamedFile::open_async("./static/index.html").await.unwrap()
@@ -29,19 +29,19 @@ async fn chat(
     query_params: web::Query<ChatQueryParams>,
     stream: web::Payload,
     settings: web::Data<settings::Settings>,
-    session_manager: web::Data<Addr<SessionManager>>,
+    session_manager: web::Data<Addr<ConnManager>>,
 ) -> Result<HttpResponse, Error> {
     let user_id = query_params.user_id.clone();
 
     ws::start(
-        WsSession {
+        WsConn {
             user_id,
             hb: Heartbeat {
                 time: Instant::now(),
-                timeout: Duration::from_secs(settings.session.timeout),
-                interval: Duration::from_secs(settings.session.interval),
+                timeout: Duration::from_secs(settings.ws_conn.timeout),
+                interval: Duration::from_secs(settings.ws_conn.interval),
             },
-            session_manager: session_manager.get_ref().clone(),
+            conn_manager: session_manager.get_ref().clone(),
         },
         &req,
         stream,
@@ -54,7 +54,7 @@ async fn main() -> std::io::Result<()> {
     let shared_settings = settings.clone();
     telemetry::setup(settings.app.environment);
 
-    let server = SessionManager::new().start();
+    let server = ConnManager::new().start();
 
     HttpServer::new(move || {
         App::new()

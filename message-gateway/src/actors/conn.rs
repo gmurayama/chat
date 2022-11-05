@@ -3,7 +3,7 @@ use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
-use crate::actors::chat::{Connect, Disconnect, ReceiveMessage, SendMessage, SessionManager};
+use crate::actors::chat::{ConnManager, Connect, Disconnect, ReceiveMessage, SendMessage};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClientMessage {
@@ -17,15 +17,15 @@ pub struct Heartbeat {
     pub interval: Duration,
 }
 
-pub struct WsSession {
+pub struct WsConn {
     pub user_id: String,
 
     pub hb: Heartbeat,
 
-    pub session_manager: Addr<SessionManager>,
+    pub conn_manager: Addr<ConnManager>,
 }
 
-impl WsSession {
+impl WsConn {
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         let interval = self.hb.interval.clone();
         let timeout = self.hb.timeout.clone();
@@ -34,7 +34,7 @@ impl WsSession {
             if Instant::now().duration_since(act.hb.time) > timeout {
                 log::error!("Websocket Client heartbeat failed, disconnecting!");
 
-                act.session_manager.do_send(Disconnect {
+                act.conn_manager.do_send(Disconnect {
                     user_id: act.user_id.clone(),
                 });
 
@@ -48,7 +48,7 @@ impl WsSession {
     }
 }
 
-impl Actor for WsSession {
+impl Actor for WsConn {
     type Context = ws::WebsocketContext<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
@@ -56,7 +56,7 @@ impl Actor for WsSession {
 
         let addr = ctx.address();
 
-        self.session_manager
+        self.conn_manager
             .send(Connect {
                 user_id: self.user_id.clone(),
                 addr: addr.recipient(),
@@ -73,7 +73,7 @@ impl Actor for WsSession {
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
         // notify chat server
-        self.session_manager.do_send(Disconnect {
+        self.conn_manager.do_send(Disconnect {
             user_id: self.user_id.clone(),
         });
 
@@ -81,7 +81,7 @@ impl Actor for WsSession {
     }
 }
 
-impl Handler<ReceiveMessage> for WsSession {
+impl Handler<ReceiveMessage> for WsConn {
     type Result = ();
 
     fn handle(&mut self, msg: ReceiveMessage, ctx: &mut Self::Context) {
@@ -90,7 +90,7 @@ impl Handler<ReceiveMessage> for WsSession {
     }
 }
 
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsConn {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         let msg = match msg {
             Ok(msg) => msg,
@@ -118,7 +118,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
                     }
                 };
 
-                self.session_manager.do_send(SendMessage {
+                self.conn_manager.do_send(SendMessage {
                     from: self.user_id.clone(),
                     to: client_message.to,
                     message: client_message.msg,

@@ -924,6 +924,16 @@ dependencies = [
 [[package]]
 name = "infrastructure"
 version = "0.1.0"
+dependencies = [
+ "log",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "tracing",
+ "tracing-bunyan-formatter",
+ "tracing-log",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "instant"
@@ -1074,9 +1084,9 @@ dependencies = [
  "actix-web",
  "actix-web-actors",
  "config",
+ "infrastructure",
  "log",
  "opentelemetry",
- "opentelemetry-jaeger",
  "reqwest",
  "serde",
  "serde-aux",

@@ -10,19 +10,37 @@ use tracing_subscriber::{
     EnvFilter, Layer, Registry,
 };
 
-use crate::settings;
+#[derive(PartialEq)]
+pub enum LoggingOptions {
+    PrettyPrint,
+    JSON,
+}
 
-pub fn setup(env: settings::Environment) {
+pub struct JaegerSettings {
+    pub host: String,
+    pub port: u32,
+}
+
+pub struct LoggingSettings {
+    pub format: LoggingOptions,
+}
+
+pub struct Settings {
+    pub log: LoggingSettings,
+    pub jaeger: JaegerSettings,
+}
+
+pub fn setup(settings: Settings) {
     LogTracer::init().expect("Failed to set logger");
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    let emit_bunyan = env == settings::Environment::Production;
+    let emit_bunyan = settings.log.format == LoggingOptions::JSON;
     let bunyan_json_layer = JsonStorageLayer.with_filter(filter_fn(move |_| emit_bunyan));
     let bunyan_formatting_layer =
         BunyanFormattingLayer::new("tracing_demo".into(), std::io::stdout)
             .with_filter(filter_fn(move |_| emit_bunyan));
 
-    let emit_pretty_formating = env == settings::Environment::Development;
+    let emit_pretty_formating = settings.log.format == LoggingOptions::PrettyPrint;
     let pretty_formatting_layer = tracing_subscriber::fmt::layer()
         .with_span_events(FmtSpan::NEW)
         .with_filter(filter_fn(move |_| emit_pretty_formating));
@@ -30,7 +48,7 @@ pub fn setup(env: settings::Environment) {
     global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
     let tracer = opentelemetry_jaeger::new_agent_pipeline()
         .with_service_name("messaging")
-        .with_endpoint("localhost:6831")
+        .with_endpoint(format!("{}:{}", settings.jaeger.host, settings.jaeger.port))
         .with_trace_config(trace::config().with_sampler(Sampler::AlwaysOn))
         .install_batch(opentelemetry::runtime::Tokio)
         .unwrap();

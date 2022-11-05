@@ -11,18 +11,27 @@ pub struct ClientMessage {
     pub to: String,
 }
 
+pub struct Heartbeat {
+    pub time: Instant,
+    pub timeout: Duration,
+    pub interval: Duration,
+}
+
 pub struct WsSession {
     pub user_id: String,
 
-    pub hb: Instant,
+    pub hb: Heartbeat,
 
     pub session_manager: Addr<SessionManager>,
 }
 
 impl WsSession {
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        ctx.run_interval(Duration::from_secs(5), |act, ctx| {
-            if Instant::now().duration_since(act.hb) > Duration::from_secs(10) {
+        let interval = self.hb.interval.clone();
+        let timeout = self.hb.timeout.clone();
+
+        ctx.run_interval(interval, move |act, ctx| {
+            if Instant::now().duration_since(act.hb.time) > timeout {
                 log::error!("Websocket Client heartbeat failed, disconnecting!");
 
                 act.session_manager.do_send(Disconnect {
@@ -93,11 +102,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
 
         match msg {
             ws::Message::Ping(msg) => {
-                self.hb = Instant::now();
+                self.hb.time = Instant::now();
                 ctx.pong(&msg);
             }
             ws::Message::Pong(_) => {
-                self.hb = Instant::now();
+                self.hb.time = Instant::now();
             }
             ws::Message::Text(text) => {
                 let client_message: ClientMessage = match serde_json::from_str(&text) {

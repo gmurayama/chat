@@ -4,9 +4,13 @@ use actix_web::{
     middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use actix_web_actors::ws;
-use message_gateway::{settings, telemetry};
+use message_gateway::{
+    actors::session::Heartbeat,
+    settings::{self},
+    telemetry,
+};
 use serde::Deserialize;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use message_gateway::actors::{chat::SessionManager, session::WsSession};
 
@@ -19,20 +23,25 @@ struct ChatQueryParams {
     user_id: String,
 }
 
-#[tracing::instrument(name = "starting websocket", skip(stream, server))]
+#[tracing::instrument(name = "starting websocket", skip(stream, settings, session_manager))]
 async fn chat(
     req: HttpRequest,
     query_params: web::Query<ChatQueryParams>,
     stream: web::Payload,
-    server: web::Data<Addr<SessionManager>>,
+    settings: web::Data<settings::Settings>,
+    session_manager: web::Data<Addr<SessionManager>>,
 ) -> Result<HttpResponse, Error> {
     let user_id = query_params.user_id.clone();
 
     ws::start(
         WsSession {
             user_id,
-            hb: Instant::now(),
-            session_manager: server.get_ref().clone(),
+            hb: Heartbeat {
+                time: Instant::now(),
+                timeout: Duration::from_secs(settings.session.timeout),
+                interval: Duration::from_secs(settings.session.interval),
+            },
+            session_manager: session_manager.get_ref().clone(),
         },
         &req,
         stream,
@@ -42,6 +51,7 @@ async fn chat(
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let settings = settings::get_config().expect("failed to get settings");
+    let shared_settings = settings.clone();
     telemetry::setup(settings.app.environment);
 
     let server = SessionManager::new().start();
@@ -50,6 +60,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(web::Data::new(server.clone()))
+            .app_data(web::Data::new(shared_settings.clone()))
             .service(Files::new("/static", "./static"))
             .route("/", web::get().to(index))
             .route("/ws", web::get().to(chat))

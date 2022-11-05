@@ -1,3 +1,7 @@
+use opentelemetry::{
+    global,
+    sdk::trace::{self, Sampler},
+};
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -23,11 +27,22 @@ pub fn setup(env: settings::Environment) {
         .with_span_events(FmtSpan::NEW)
         .with_filter(filter_fn(move |_| emit_pretty_formating));
 
+    global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
+    let tracer = opentelemetry_jaeger::new_agent_pipeline()
+        .with_service_name("messaging")
+        .with_endpoint("localhost:6831")
+        .with_trace_config(trace::config().with_sampler(Sampler::AlwaysOn))
+        .install_batch(opentelemetry::runtime::Tokio)
+        .unwrap();
+
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
     let subscriber = Registry::default()
         .with(env_filter)
         .with(bunyan_json_layer)
         .with(bunyan_formatting_layer)
-        .with(pretty_formatting_layer);
+        .with(pretty_formatting_layer)
+        .with(telemetry);
 
     set_global_default(subscriber).expect("Failed to set subscriber");
 }

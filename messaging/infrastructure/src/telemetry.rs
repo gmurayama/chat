@@ -36,9 +36,8 @@ pub fn setup(settings: Settings) {
 
     let emit_bunyan = settings.log.format == LoggingOptions::JSON;
     let bunyan_json_layer = JsonStorageLayer.with_filter(filter_fn(move |_| emit_bunyan));
-    let bunyan_formatting_layer =
-        BunyanFormattingLayer::new("tracing_demo".into(), std::io::stdout)
-            .with_filter(filter_fn(move |_| emit_bunyan));
+    let bunyan_formatting_layer = BunyanFormattingLayer::new("messaging".into(), std::io::stdout)
+        .with_filter(filter_fn(move |_| emit_bunyan));
 
     let emit_pretty_formating = settings.log.format == LoggingOptions::PrettyPrint;
     let pretty_formatting_layer = tracing_subscriber::fmt::layer()

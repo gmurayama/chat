@@ -21,3 +21,6 @@ tracing-log = "0.1"
 log = "0.4"
 config = "0.13"
 serde-aux = "3"
+tracing-opentelemetry = "0.18"
+opentelemetry-jaeger = { version = "0.17", features = ["rt-tokio"] }
+opentelemetry = { version = "0.18" }

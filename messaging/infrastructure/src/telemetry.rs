@@ -63,3 +63,9 @@ pub fn setup(settings: Settings) {
 
     set_global_default(subscriber).expect("Failed to set subscriber");
 }
+
+// TODO: shutdown_tracer_provider() can hangs indefinitely (https://github.com/open-telemetry/opentelemetry-rust/issues/868)
+// `spawn_blocking` is a solution, but stopping the application would stop the thread as well?
+pub fn teardown() {
+    global::shutdown_tracer_provider();
+}

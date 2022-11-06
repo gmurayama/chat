@@ -1,7 +1,6 @@
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use infrastructure::telemetry::{self, JaegerSettings, LoggingOptions, LoggingSettings, Settings};
 use messaging_api::{routes, settings};
-use opentelemetry::global;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -28,7 +27,7 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await?;
 
-    global::shutdown_tracer_provider();
+    telemetry::teardown();
 
     Ok(())
 }

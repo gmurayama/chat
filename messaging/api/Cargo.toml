@@ -11,6 +11,8 @@ actix-web = "4.2"
 actix-web-actors = "4.1"
 reqwest = "0.11"
 
+tokio-postgres = "0.7.7"
+
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

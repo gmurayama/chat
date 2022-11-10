@@ -15,3 +15,9 @@ tracing-opentelemetry = { workspace = true }
 opentelemetry = { workspace = true, features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.17", features = ["rt-tokio"] }
 tokio = { workspace = true, features = ["sync"] }
+eyre = { workspace = true }
+
+deadpool-postgres = { workspace = true }
+tokio-postgres = { workspace = true, features = ["with-uuid-0_8"] }
+
+uuid = { workspace = true, features = ["v4"] }

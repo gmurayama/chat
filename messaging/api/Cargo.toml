@@ -11,7 +11,8 @@ actix-web = "4.2"
 actix-web-actors = "4.1"
 reqwest = "0.11"
 
-tokio-postgres = "0.7.7"
+tokio-postgres = { workspace = true }
+deadpool-postgres = { workspace = true }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -25,5 +26,6 @@ config = { workspace = true }
 serde-aux = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 opentelemetry = { workspace = true, features = ["rt-tokio"] }
+eyre = { workspace = true }
 
 infrastructure = { path = "../infrastructure" }

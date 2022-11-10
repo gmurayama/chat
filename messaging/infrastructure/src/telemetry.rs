@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use opentelemetry::{
     global,
     sdk::trace::{self, Sampler},
 };
+use tokio::task;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -28,6 +31,7 @@ pub struct LoggingSettings {
 pub struct Settings {
     pub log: LoggingSettings,
     pub jaeger: JaegerSettings,
+    pub service_name: String,
 }
 
 pub fn setup(settings: Settings) {
@@ -36,8 +40,9 @@ pub fn setup(settings: Settings) {
 
     let emit_bunyan = settings.log.format == LoggingOptions::JSON;
     let bunyan_json_layer = JsonStorageLayer.with_filter(filter_fn(move |_| emit_bunyan));
-    let bunyan_formatting_layer = BunyanFormattingLayer::new("messaging".into(), std::io::stdout)
-        .with_filter(filter_fn(move |_| emit_bunyan));
+    let bunyan_formatting_layer =
+        BunyanFormattingLayer::new(settings.service_name.clone(), std::io::stdout)
+            .with_filter(filter_fn(move |_| emit_bunyan));
 
     let emit_pretty_formating = settings.log.format == LoggingOptions::PrettyPrint;
     let pretty_formatting_layer = tracing_subscriber::fmt::layer()
@@ -46,7 +51,7 @@ pub fn setup(settings: Settings) {
 
     global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
     let tracer = opentelemetry_jaeger::new_agent_pipeline()
-        .with_service_name("messaging")
+        .with_service_name(settings.service_name.clone())
         .with_endpoint(format!("{}:{}", settings.jaeger.host, settings.jaeger.port))
         .with_trace_config(trace::config().with_sampler(Sampler::AlwaysOn))
         .install_batch(opentelemetry::runtime::Tokio)
@@ -64,8 +69,12 @@ pub fn setup(settings: Settings) {
     set_global_default(subscriber).expect("Failed to set subscriber");
 }
 
-// TODO: shutdown_tracer_provider() can hangs indefinitely (https://github.com/open-telemetry/opentelemetry-rust/issues/868)
-// `spawn_blocking` is a solution, but stopping the application would stop the thread as well?
-pub fn teardown() {
-    global::shutdown_tracer_provider();
+pub async fn teardown() {
+    let res = task::spawn_blocking(move || {
+        global::shutdown_tracer_provider();
+    });
+
+    if let Err(_) = tokio::time::timeout(Duration::from_secs(5), res).await {
+        log::error!("could not shutdown tracer provider in 5 sec");
+    }
 }

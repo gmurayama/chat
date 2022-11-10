@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use opentelemetry::{
     global,
     sdk::trace::{self, Sampler},
 };
+use tokio::task;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_log::LogTracer;
@@ -46,8 +49,12 @@ pub fn setup(env: settings::Environment) {
     set_global_default(subscriber).expect("Failed to set subscriber");
 }
 
-// TODO: shutdown_tracer_provider() can hangs indefinitely (https://github.com/open-telemetry/opentelemetry-rust/issues/868)
-// `spawn_blocking` is a solution, but stopping the application would stop the thread as well?
-pub fn teardown() {
-    global::shutdown_tracer_provider();
+pub async fn teardown() {
+    let res = task::spawn_blocking(move || {
+        global::shutdown_tracer_provider();
+    });
+
+    if let Err(_) = tokio::time::timeout(Duration::from_secs(5), res).await {
+        log::error!("could not shutdown tracer provider in 5 sec");
+    }
 }

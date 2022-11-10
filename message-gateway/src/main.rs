@@ -9,7 +9,6 @@ use message_gateway::{
     settings::{self},
     telemetry,
 };
-use opentelemetry::global;
 use serde::Deserialize;
 use std::time::{Duration, Instant};
 
@@ -71,7 +70,7 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await?;
 
-    telemetry::teardown();
+    telemetry::teardown().await;
 
     Ok(())
 }

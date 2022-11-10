@@ -1023,6 +1023,7 @@ dependencies = [
  "serde",
  "serde-aux",
  "serde_json",
+ "tokio",
  "tracing",
  "tracing-bunyan-formatter",
  "tracing-log",

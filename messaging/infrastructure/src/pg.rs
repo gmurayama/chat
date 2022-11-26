@@ -42,13 +42,30 @@ impl<'a> PgSessionRepository<'a> {
         PgSessionRepository { conn }
     }
 
-    pub async fn add(&self, user_id: String, addr: String) -> eyre::Result<()> {
+    pub async fn add(&self, user_id: String, addr: String) -> eyre::Result<String> {
         let db = self.conn.get().await?;
+
         let user_id = Uuid::parse_str(user_id.as_str())?;
 
         let params: &[&(dyn ToSql + Sync)] = &[&user_id, &addr];
+        let query = db.query_one(
+            "INSERT INTO sessions(user_id, addr) VALUES($1, $2) RETURNING id",
+            params.into(),
+        );
+
+        let res = tokio::time::timeout(Duration::from_secs(3), query).await??;
+        let id = res.get("id");
+
+        Ok(id)
+    }
+
+    pub async fn remove(&self, user_id: String, session_id: String) -> eyre::Result<()> {
+        let db = self.conn.get().await?;
+        let user_id = Uuid::parse_str(user_id.as_str())?;
+
+        let params: &[&(dyn ToSql + Sync)] = &[&user_id, &session_id];
         let query = db.execute(
-            "INSERT INTO sessions(user_id, addr) VALUES($1, $2)",
+            "DELETE FROM sessions WHERE user_id = $1 AND id = $2",
             params.into(),
         );
 

@@ -1,4 +1,4 @@
-use actix_web::{error, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{delete, error, post, web, HttpRequest, HttpResponse, Responder};
 use infrastructure::pg;
 use serde::Deserialize;
 
@@ -25,6 +25,29 @@ async fn start_session(
 
     session_repository
         .add(path.user_id.clone(), server_addr.to_string())
+        .await
+        .map_err(|e| error::ErrorInternalServerError(e))?;
+
+    Ok(HttpResponse::Ok())
+}
+
+#[derive(Debug, Deserialize)]
+struct DeleteSessionPath {
+    pub user_id: String,
+    pub session_id: String,
+}
+
+#[tracing::instrument(skip(pool))]
+#[delete("/users/{user_id}/sessions/{session_id}")]
+async fn delete_session(
+    req: HttpRequest,
+    path: web::Path<DeleteSessionPath>,
+    pool: web::Data<deadpool_postgres::Pool>,
+) -> Result<impl Responder, actix_web::Error> {
+    let session_repository = pg::PgSessionRepository::new(&pool);
+
+    session_repository
+        .remove(path.user_id.clone(), path.session_id.clone())
         .await
         .map_err(|e| error::ErrorInternalServerError(e))?;
 

@@ -1,8 +1,6 @@
 use actix::{Actor, Addr};
 use actix_files::{Files, NamedFile};
-use actix_web::{
-    middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder,
-};
+use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use actix_web_actors::ws;
 use message_gateway::{
     actors::conn::Heartbeat,
@@ -11,6 +9,7 @@ use message_gateway::{
 };
 use serde::Deserialize;
 use std::time::{Duration, Instant};
+use tracing_actix_web::TracingLogger;
 
 use message_gateway::actors::{chat::ConnManager, conn::WsConn};
 
@@ -23,7 +22,7 @@ struct ChatQueryParams {
     user_id: String,
 }
 
-#[tracing::instrument(name = "starting websocket", skip(stream, settings, session_manager))]
+#[tracing::instrument(name = "/ws/chat", skip(stream, settings, session_manager))]
 async fn chat(
     req: HttpRequest,
     query_params: web::Query<ChatQueryParams>,
@@ -54,12 +53,12 @@ async fn main() -> std::io::Result<()> {
     let shared_settings = settings.clone();
     telemetry::setup(settings.app.environment);
 
-    let server = ConnManager::new().start();
+    let conn_manager = ConnManager::new().start();
 
     HttpServer::new(move || {
         App::new()
-            .wrap(Logger::default())
-            .app_data(web::Data::new(server.clone()))
+            .wrap(TracingLogger::default())
+            .app_data(web::Data::new(conn_manager.clone()))
             .app_data(web::Data::new(shared_settings.clone()))
             .service(Files::new("/static", "./static"))
             .route("/", web::get().to(index))

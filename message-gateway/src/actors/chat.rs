@@ -35,7 +35,7 @@ pub struct Disconnect {
 }
 
 // -------------------
-// SessionManager
+// ConnManager
 
 pub struct ConnManager {
     pub connections: HashMap<String, Recipient<ReceiveMessage>>,
@@ -56,7 +56,7 @@ impl Actor for ConnManager {
 impl Handler<Connect> for ConnManager {
     type Result = ();
 
-    #[tracing::instrument(name = "Handler Connect", skip(self, msg, _ctx))]
+    #[tracing::instrument(name = "actors.chat.Connect", skip(self, msg, _ctx))]
     fn handle(&mut self, msg: Connect, _ctx: &mut Self::Context) -> Self::Result {
         self.connections.insert(msg.user_id, msg.addr);
     }
@@ -65,7 +65,7 @@ impl Handler<Connect> for ConnManager {
 impl Handler<Disconnect> for ConnManager {
     type Result = ();
 
-    #[tracing::instrument(name = "Handler Disconnect", skip(self, _ctx))]
+    #[tracing::instrument(name = "actors.chat.Disconnect", skip(self, _ctx))]
     fn handle(&mut self, msg: Disconnect, _ctx: &mut Self::Context) -> Self::Result {
         self.connections.remove(&msg.user_id);
     }
@@ -74,7 +74,7 @@ impl Handler<Disconnect> for ConnManager {
 impl Handler<SendMessage> for ConnManager {
     type Result = ();
 
-    #[tracing::instrument(name = "Handler SendMessage", skip(self, _ctx))]
+    #[tracing::instrument(name = "actors.chat.SendMessage", skip(self, _ctx))]
     fn handle(&mut self, msg: SendMessage, _ctx: &mut Self::Context) -> Self::Result {
         match self.connections.get(&msg.to) {
             Some(s) => s.do_send(ReceiveMessage {

@@ -15,6 +15,7 @@ config = "0.14"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde-aux = "4.5"
+actix-ws = "0.3"
 
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 eyre = { workspace = true }

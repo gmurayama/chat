@@ -8,10 +8,8 @@ use tracing::log;
 
 use crate::middlewares::error_header::add_error_header;
 use crate::middlewares::timeout::Timeout;
-use crate::{
-    middlewares::{metrics::Metrics, tracing::Tracing},
-    routes::reply,
-};
+use crate::middlewares::{metrics::Metrics, tracing::Tracing};
+use crate::routes::message_ws;
 
 async fn healthcheck() -> impl Responder {
     HttpResponse::Ok().json(json!({}))
@@ -80,7 +78,7 @@ impl Server {
                     web::scope("/v1")
                         .wrap(timeout_middleware.clone())
                         .route("/healthcheck", web::get().to(healthcheck))
-                        .route("/reply", web::post().to(reply)),
+                        .route("/ws/message", web::get().to(message_ws)),
                 )
         })
         .listen(listener)

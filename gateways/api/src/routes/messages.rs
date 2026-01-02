@@ -2,8 +2,14 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use actix_ws::Message;
 use futures_util::StreamExt as _;
 
-#[tracing::instrument(name = "gateways.api.routes.messages_ws", skip(body))]
-pub async fn message_ws(req: HttpRequest, body: web::Payload) -> actix_web::Result<HttpResponse> {
+use crate::server::AppState;
+
+#[tracing::instrument(name = "gateways.api.routes.messages_ws", skip(body, state))]
+pub async fn message_ws(
+    req: HttpRequest,
+    body: web::Payload,
+    state: web::Data<AppState>,
+) -> actix_web::Result<HttpResponse> {
     let (response, mut session, mut msg_stream) = actix_ws::handle(&req, body)?;
 
     actix_web::rt::spawn(async move {
@@ -14,8 +20,11 @@ pub async fn message_ws(req: HttpRequest, body: web::Payload) -> actix_web::Resu
                         return;
                     }
                 }
-
-                Message::Text(msg) => println!("Got text: {msg}"),
+                Message::Text(msg) => {
+                    if let Err(e) = session.text(format!("got it! you sent \"{msg}\"")).await {
+                        log::error!("errror: {e}");
+                    }
+                }
                 _ => break,
             }
         }

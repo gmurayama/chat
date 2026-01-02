@@ -270,6 +270,7 @@ dependencies = [
  "eyre",
  "futures-util",
  "infrastructure",
+ "log",
  "prometheus-client",
  "reqwest",
  "serde",

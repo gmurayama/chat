@@ -78,7 +78,7 @@ impl Server {
                     web::scope("/v1")
                         .wrap(timeout_middleware.clone())
                         .route("/healthcheck", web::get().to(healthcheck))
-                        .route("/ws/message", web::get().to(message_ws)),
+                        .route("/ws", web::get().to(message_ws)),
                 )
         })
         .listen(listener)
